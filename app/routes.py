@@ -4,6 +4,7 @@ from app import db
 from app.models import Car
 import sqlalchemy as sa
 import sys
+from app.forms import AddForm, SearchForm
 
 
 @app.route('/init')
@@ -34,6 +35,44 @@ def initialize_db():
         db.session.commit()
 
     return "Initialized DB"
+
+
+@app.route('/add_car', methods=['GET', 'POST'])
+def add_car():
+    form = AddForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        year = form.year.data 
+        origin = form.origin.data
+        mpg = form.mpg.data
+        c = Car(name, year, origin, mpg)
+        db.session.add(c)
+        db.session.commit()
+        form.origin.data = ''
+        form.mpg.data = ''
+        form.year.data = ''
+        form.name.data = ''
+        return redirect(url_for('add_car'))
+    return render_template('add_car.html',form = form)
+
+
+@app.route('/search', methods=['GET', 'POST'])
+def search():
+    form = SearchForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        record = db.session.query(Car).filter(Car.name.contains(name))
+        if record:
+            return render_template('view_cars.html', cars=record)
+        else:
+            return render_template('not_found.html')
+    return render_template('search.html', form=form)
+        
+@app.route('/sort_model')
+def sort_by_model():
+    all = db.session.query(Car).order_by(Car.name).all()
+    print(all, file=sys.stderr)
+    return render_template('view_cars.html', cars=all)
 
 @app.route('/wipe')
 def wipe():
